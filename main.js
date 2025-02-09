@@ -11,9 +11,12 @@ let folderWatcher;
 let tray = null; // Global tray object
 
 function createWindow() {
+    // Check if the app was launched with the "--hidden" flag
+    const startMinimized = process.argv.includes('--hidden');
     mainWindow = new BrowserWindow({
         width: 1100,
         height: 850,
+        show: !startMinimized, // if startMinimized is true, window is not shown
         webPreferences: {
             // For security reasons, disable nodeIntegration and enable contextIsolation.
             nodeIntegration: true,
