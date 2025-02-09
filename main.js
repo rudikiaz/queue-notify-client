@@ -35,7 +35,10 @@ function createWindow() {
     registerIpcHandlers(mainWindow, folderWatcher);
 
     // Create tray icon and set its context menu.
-    tray = new Tray(path.join(__dirname, 'trayIcon.png'));
+    const iconPath = app.isPackaged 
+        ? path.join(process.resourcesPath, 'trayIcon.png')
+        : path.join(__dirname, 'trayIcon.png');
+    tray = new Tray(iconPath);
     const contextMenu = Menu.buildFromTemplate([
         { label: 'Show App', click: () => { mainWindow.show(); } },
         { label: 'Quit', click: () => { app.isQuiting = true; app.quit(); } }

@@ -1,15 +1,50 @@
 {
-  "name": "electron-app",
+  "name": "queue-notify-client",
   "version": "1.0.0",
-  "description": "An Electron application with basic GUI functionalities and folder watcher.",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder"
   },
-  "keywords": [],
-  "author": "",
-  "license": "MIT",
+  "build": {
+    "appId": "com.rudiflesk.queue-notify",
+    "productName": "Shuffle Queue Notifier",
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "lib/**/*",
+      "config.json"
+    ],
+    "extraResources": [
+      {
+        "from": "trayIcon.png",
+        "to": "trayIcon.png",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "trayIcon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Shuffle Queue Notifier",
+      "runAfterFinish": true
+    },
+    "mac": {
+      "icon": "build/icon.icns"
+    }
+  },
   "devDependencies": {
-    "electron": "^23.1.0"
+    "electron": "^22.0.0",
+    "electron-builder": "^23.0.0"
   }
-} 
+}

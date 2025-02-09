@@ -218,8 +218,17 @@ function bindNotifyResultListener() {
 function setupAutoStartToggle() {
     const autoStartToggle = document.getElementById('autoStartToggle');
     if (autoStartToggle) {
+        // Read stored state from localStorage (default to false if not set)
+        const storedAutoStart = localStorage.getItem('autoStart');
+        const initialState = storedAutoStart === 'true';
+        autoStartToggle.checked = initialState;
+        // Immediately update auto-start setting based on persisted value
+        window.electronAPI.updateAutoStart(initialState);
+        console.log("Auto-start initial state:", initialState);
+
         autoStartToggle.addEventListener('change', () => {
             const enabled = autoStartToggle.checked;
+            localStorage.setItem('autoStart', enabled.toString());
             window.electronAPI.updateAutoStart(enabled);
             console.log("Auto-start toggle changed. New state:", enabled);
         });
