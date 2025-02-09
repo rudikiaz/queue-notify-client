@@ -11,6 +11,7 @@ function init() {
     setupFolderSelection(appUUID);
     setupTestNotification();
     setupTelegramLink();
+    setupCurseForgeLink();
     bindNotifyResultListener();
 }
 
@@ -188,6 +189,20 @@ function setupTelegramLink() {
         e.preventDefault();
         window.electronAPI.openExternalLink('https://t.me/queuenotify_rudikiaz_bot');
     });
+}
+
+function setupCurseForgeLink() {
+    const curseForgeLink = document.getElementById('curseForgeLink');
+    if (curseForgeLink) {
+        curseForgeLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (window.electronAPI && typeof window.electronAPI.openExternalLink === 'function') {
+                window.electronAPI.openExternalLink('https://www.curseforge.com/wow/addons/queuenotify');
+            } else {
+                console.error("electronAPI is not available");
+            }
+        });
+    }
 }
 
 function bindNotifyResultListener() {

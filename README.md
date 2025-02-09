@@ -1,8 +1,9 @@
 # Shuffle Queue Notifier
 
-Shuffle Queue Notifier is an Electron-based desktop application designed to help monitor your World of Warcraft retail folder's **Screenshots** subdirectory for newly created `.tga` files. When a new file is detected, the application sends a notification request to a backend endpoint. It also provides registration via a `/register` endpoint along with the ability to send test notifications and manage settings through a user-friendly interface built with Bootstrap.
+Shuffle Queue Notifier is an Electron-based desktop application designed to monitor your World of Warcraft retail folder's **Screenshots** subfolder for newly created `.tga` files. When a new file is detected, the application notifies a backend service via a `/notify` endpoint. The app also provides registration through a `/register` endpoint and includes a user-friendly Setup interface for managing settings and external integrations.
 
----
+> **Note:**  
+> The project is currently configured with `nodeIntegration: true` (enabled in `main.js`) for development purposes. In production you should switch it off and enable security measures accordingly.
 
 ## Table of Contents
 
@@ -16,11 +17,12 @@ Shuffle Queue Notifier is an Electron-based desktop application designed to help
   - [Main Process (`main.js`)](#main-js)
   - [Preload Script (`preload.js`)](#preload-js)
   - [Renderer Process (`renderer.js`)](#renderer-js)
-  - [HTML Layout (`index.html`)](#index-html)
+  - [HTML Layout (`index.html`)](#indexhtml)
+- [Integration with WoW](#integration-with-wow)
 - [Endpoints](#endpoints)
   - [/register Endpoint](#register-endpoint)
   - [/notify Endpoint](#notify-endpoint)
-- [WoW Integration](#wow-integration)
+- [External Links](#external-links)
 - [Workflow](#workflow)
 - [Git Ignore](#git-ignore)
 - [License](#license)
@@ -29,36 +31,36 @@ Shuffle Queue Notifier is an Electron-based desktop application designed to help
 
 ## Features
 
-- **UUID Registration:**  
-  Automatically generates a unique UUID for your device. You can register this ID using the `/register` endpoint so that your computer is uniquely identified.
-  
+- **Automatic UUID Generation & Registration:**  
+  Generates a unique UUID for your computer and allows registration via the `/register` endpoint. Once registered, the encoded ID is stored in local storage.
+
 - **Folder Monitoring:**  
-  Monitors the **Screenshots** subfolder within your selected World of Warcraft retail folder for newly created `.tga` files. When a file is detected, it calls the `/notify` endpoint and deletes the file afterward.
+  Uses a dedicated folder watcher (in `lib/folderWatcher.js`) to monitor the **Screenshots** subfolder for new `.tga` files. When a file is detected, it triggers the `/notify` endpoint before deleting the file.
 
 - **Test Notifications:**  
-  Provides a button to manually send a test notification to the `/notify` endpoint.
+  Allows you to manually trigger a test notification by sending a payload to the `/notify` endpoint.
 
-- **Persistent Settings:**  
-  Settings such as the selected folder, notification retry count, and registered encoded ID are stored in the browser's local storage.
+- **Real-time UI Updates:**  
+  The application UI updates to display registration status and watcher activation status.
 
-- **Configurable API Endpoint:**  
-  The backend API base URL is externalized to a `config.json` file, allowing you to adjust it without modifying the application code.
+- **External Link Integration:**  
+  Provides links for users to register on Telegram and install the QueueNotify WoW addon from CurseForge. External links are opened in the default system browser via Electron's API.
 
-- **Clean, Responsive UI:**  
-  Uses Bootstrap to create a vertical navigation interface with two tabs: **QueueNotifier** (for status and notifications toggle) and **Setup** (for registration and configuration).
+- **Configuration via `config.json`:**  
+  The backend API endpoint is stored in `config.json`, making it easy to update without touching the source code.
 
 ---
 
 ## Installation
 
-1. **Clone the repository:**
+1. **Clone the Repository:**
 
    ```bash
    git clone <repository-url>
-   cd <repository-directory>
+   cd queue-notify-client
    ```
 
-2. **Install dependencies:**
+2. **Install Dependencies:**
 
    ```bash
    npm install
@@ -68,7 +70,7 @@ Shuffle Queue Notifier is an Electron-based desktop application designed to help
 
 ## Configuration
 
-The API base URL is configured in the `config.json` file:
+The API base URL is defined in the `config.json` file. For example:
 
 ```json
 {
@@ -76,7 +78,7 @@ The API base URL is configured in the `config.json` file:
 }
 ```
 
-You can change the `"apiBaseUrl"` value to point to the appropriate backend server.
+You can update this URL to match your backend endpoint.
 
 ---
 
@@ -84,24 +86,27 @@ You can change the `"apiBaseUrl"` value to point to the appropriate backend serv
 
 ### Running the Application
 
-After installing the dependencies, launch the application with:
+After installing dependencies, run the application with:
 
 ```bash
 npm start
 ```
 
-The Electron app will start and open a window that automatically opens Developer Tools for debugging.
+The application window will open with the following updated settings:
+- **Window size:** 1000 x 800 pixels.
+- **DevTools:** Disabled by default.
+- **Node Integration:** Enabled (for development).
 
 ### Packaging the Application
 
-To package your Electron app (for example, for Windows), you can use tools like [electron-packager](https://github.com/electron/electron-packager) or [electron-builder](https://www.electron.build/). For instance, using electron-packager:
+You can package your Electron app using tools like [electron-packager](https://github.com/electron/electron-packager) or [electron-builder](https://www.electron.build/). For example, using electron-packager:
 
 ```bash
 npm install -g electron-packager
 electron-packager . ShuffleQueueNotifier --platform=win32 --arch=x64
 ```
 
-This command creates a standalone executable for Windows.
+This creates a standalone executable suitable for distribution.
 
 ---
 
@@ -109,53 +114,45 @@ This command creates a standalone executable for Windows.
 
 ### Main Process (`main.js`)
 
-- **Window Creation:**  
-  Creates the main application window, sets size, loads `index.html`, and removes the default OS menu.
-
-- **Folder Watcher & IPC Handlers:**  
-  - Handles folder selection dialogs.
-  - Starts a watcher on the **Screenshots** folder (subdirectory of the selected WoW retail folder).
-  - Listens for `.tga` file creation events, calls the `/notify` endpoint, and deletes the file after processing.
-  - Uses settings (such as `notifyRetries` and `notifyEnabled`) and the API base URL from the `config.json`.
+- **Window Creation & Configuration:**  
+  Creates and configures the main window with dimensions of 1000 x 800 pixels. The openDevTools call is commented out to avoid showing developer tools by default.
+- **IPC & Folder Watcher Initialization:**  
+  Instantiates the folder watcher and registers IPC handlers (in `lib/ipcHandlers.js`).
 
 ### Preload Script (`preload.js`)
 
-- **Context Isolation:**  
-  Uses `contextBridge` to expose secure APIs to the renderer.
-  
-- **API Exposure:**  
-  Provides functions for:
-  - Selecting a folder.
-  - Starting and stopping the watcher.
-  - Opening external links.
-  - Updating notification settings.
-  
+- **Secure API Exposure:**  
+  Uses Electron's `contextBridge` to expose functions (like folder selection, notification control, and opening external links) under `window.electronAPI`.
 - **Configuration Exposure:**  
-  The configuration from `config.json` (such as the API base URL) is exposed to the renderer.
+  Exposes settings from `config.json` to the renderer via `window.config`.
 
 ### Renderer Process (`renderer.js`)
 
-- **UI Logic & Settings Persistence:**  
-  Manages:
-  - Unique UUID generation and display.
-  - Registration process for connecting with the `/register` endpoint.
-  - Folder selection with a default fallback (`C:\Program Files (x86)\World of Warcraft\_retail_`).
-  - Notification retry count persistence.
-  - Updating the status indicator based on registration and folder selection.
-  - Sending test notifications to the `/notify` endpoint.
-  
-- **Interaction with Main Process:**  
-  Uses the exposed `electronAPI` to communicate with the main process and update settings dynamically.
+- **UI Initialization & Event Binding:**  
+  Handles generating and displaying the UUID, managing folder selection, registration, test notifications, and dynamically updating the watcher status.
+- **External Link Handling:**  
+  Binds click events for both the Telegram registration link and the CurseForge addon link (using `setupTelegramLink()` and the new `setupCurseForgeLink()` functions).
 
 ### HTML Layout (`index.html`)
 
-- **Vertical Navigation Interface:**  
-  Uses Bootstrap to layout two tabs:
-  - **QueueNotifier:** Displays watcher status and a toggle for enabling/disabling notifications.
-  - **Setup:** Contains registration, folder selection, notification retry settings, and a test notification button.
+- **Responsive Interface:**  
+  The UI is built with Bootstrap and organized into a vertical navigation layout with two tabs: **QueueNotifier** (for status) and **Setup**.
+- **Setup Tab Enhancements:**  
+  The Setup tab now includes:
+  - Instructions to share your UUID with the Telegram bot.
+  - A new instruction prompting users to install the QueueNotify addon from CurseForge using a clickable link.
 
-- **Responsive UI Elements:**  
-  Contains relevant buttons and input fields organized using Bootstrap components.
+---
+
+## Integration with WoW
+
+For the application to function correctly, the QueueNotify addon must be installed in your World of Warcraft retail client. This addon communicates with the desktop application to properly synchronize notifications.
+
+- **Installation Sources:**
+  - [CurseForge](https://www.curseforge.com/wow/addons/queuenotify)  
+  - [Wago](https://addons.wago.io/addons/queuenotify)
+
+After installing the addon, ensure that it is enabled in your WoW client.
 
 ---
 
@@ -164,72 +161,65 @@ This command creates a standalone executable for Windows.
 ### /register Endpoint
 
 - **Purpose:**  
-  Registers the device's UUID with your backend.
-
+  Registers your computer by sending the generated UUID.
 - **Request:**  
-  Send a POST request with a JSON payload:
-
   ```json
-  { "id": "device-uuid" }
+  { "id": "your-uuid" }
   ```
-
 - **Response:**  
-  Expects a JSON object containing an `"encodedID"` key. This encoded ID is stored locally once registration is successful.
+  Expects a payload containing an `"encodedID"`, which is then stored locally upon a successful registration.
 
 ### /notify Endpoint
 
 - **Purpose:**  
-  Notifies the backend of a new screenshot (or via a manual test).
-
+  Notifies the backend during file events (or manual testing) with the registered encoded ID and notification retry count.
 - **Request:**  
-  Send a POST request with a JSON payload:
-
   ```json
   {
     "encodedID": "registered-encoded-id",
     "notifyRetries": 1
   }
   ```
-
 - **Response:**  
-  The response from this endpoint is used to update the application UI and log the result.
+  The result of the notification is displayed in the UI and logged in the application.
 
-## WoW Integration
+---
 
-For the application to work properly, the corresponding World of Warcraft addon must be installed. The **QueueNotify** addon facilitates communication between your WoW client and this desktop application, ensuring that notifications are correctly routed.
+## External Links
 
-You can install the addon from the following sources:
+The Setup interface provides two external links:
+- **Telegram:**  
+  Sends you to the Telegram bot (`@queuenotify_rudikiaz_bot`) for registration.
+- **CurseForge:**  
+  Opens the QueueNotify addon page from CurseForge using Electron's API. When clicked, these links are opened in the user's default system browser.
 
-- [CurseForge](https://www.curseforge.com/wow/addons/queuenotify)
-- [Wago](https://addons.wago.io/addons/queuenotify)
-
-After installation, please ensure that the addon is enabled in your World of Warcraft retail client.
+---
 
 ## Workflow
 
 1. **Registration:**  
-   - Upon launch, the application displays a unique UUID.
-   - Click **Register UUID** to send the UUID to the backend via the `/register` endpoint. The returned encoded ID is stored in local storage.
-
+   - On first launch, a unique UUID is generated and displayed.
+   - Share this UUID with the Telegram bot and click **Register UUID**. Upon successful registration, the encoded ID is stored.
 2. **Folder Selection:**  
-   - Use **Select Folder** to choose the World of Warcraft retail folder. If not selected, the default path `"C:\Program Files (x86)\World of Warcraft\_retail_"` is used.
-   - The application automatically monitors the **Screenshots** subfolder for new `.tga` files.
-
-3. **Watcher Activation:**  
-   - When both a valid registered encoded ID and a folder are present, the watcher is activated, and the status indicator updates accordingly.
-   - When a `.tga` file is detected, the `/notify` endpoint is called and the file is subsequently deleted.
-
+   - Use the **Select Folder** button to choose your WoW retail folder. The app then monitors the **Screenshots** subfolder.
+3. **Watching & Notifications:**  
+   - Once registered and a valid folder is selected, the folder watcher activates and updates the status.
+   - New `.tga` files trigger the `/notify` endpoint and are deleted after being processed.
 4. **Test Notifications:**  
-   - Use the **Test Notifications** button in the Setup tab to manually trigger a notification using the current settings.
-
-5. **Notification Toggle:**  
-   - Use the toggle in the QueueNotifier tab to enable or disable notifications dynamically.
+   - Use the **Test Notifications** button to manually verify the notification flow.
+5. **External Link Actions:**  
+   - Click the Telegram link to register your Telegram user.
+   - Click the CurseForge link to be redirected to the QueueNotify addon page in your default browser.
 
 ---
 
 ## Git Ignore
 
-The `.gitignore` file ensures that commonly ignored files and directories (like the `node_modules` folder) are not committed to version control.
+The `.gitignore` file ensures that files such as the `node_modules` folder are not committed to version control.
+
+```
+node_modules/
+```
 
 ---
 

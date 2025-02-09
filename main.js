@@ -12,7 +12,7 @@ let folderWatcher;
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1000,
-        height: 750,
+        height: 800,
         webPreferences: {
             // For security reasons, disable nodeIntegration and enable contextIsolation.
             nodeIntegration: true,
@@ -25,7 +25,7 @@ function createWindow() {
     Menu.setApplicationMenu(null);
 
     mainWindow.loadFile('index.html');
-    mainWindow.webContents.openDevTools();
+    //mainWindow.webContents.openDevTools();
 
     // Instantiate the folder watcher with the main window and configuration.
     folderWatcher = new FolderWatcher(mainWindow, config);
