@@ -3,7 +3,7 @@
 Shuffle Queue Notifier is an Electron-based desktop application designed to monitor your World of Warcraft retail folder's **Screenshots** subfolder for newly created `.tga` files. When a new file is detected, the application notifies a backend service via a `/notify` endpoint. The app also provides registration through a `/register` endpoint and includes a user-friendly Setup interface for managing settings and external integrations.
 
 > **Note:**  
-> The project is currently configured with `nodeIntegration: true` (enabled in `main.js`) for development purposes. In production you should switch it off and enable security measures accordingly.
+> For development purposes, the project is currently configured with `nodeIntegration: true` in `main.js`. In production, you should disable node integration and enable additional security measures.
 
 ## Table of Contents
 
@@ -23,6 +23,8 @@ Shuffle Queue Notifier is an Electron-based desktop application designed to moni
   - [/register Endpoint](#register-endpoint)
   - [/notify Endpoint](#notify-endpoint)
 - [External Links](#external-links)
+- [Tray Functionality](#tray-functionality)
+- [Auto-Start Settings](#auto-start-settings)
 - [Workflow](#workflow)
 - [Git Ignore](#git-ignore)
 - [License](#license)
@@ -41,13 +43,19 @@ Shuffle Queue Notifier is an Electron-based desktop application designed to moni
   Allows you to manually trigger a test notification by sending a payload to the `/notify` endpoint.
 
 - **Real-time UI Updates:**  
-  The application UI updates to display registration status and watcher activation status.
+  The UI updates to display registration status, the current folder watcher status, and other settings.
 
 - **External Link Integration:**  
-  Provides links for users to register on Telegram and install the QueueNotify WoW addon from CurseForge. External links are opened in the default system browser via Electron's API.
+  Provides clickable links that open in the default system browser. These include the Telegram bot link for user registration and the CurseForge addon link for installing the QueueNotify WoW addon.
+
+- **Tray Support:**  
+  The application now supports minimizing to the system tray. When the close (X) button is pressed, the app hides in the tray. The tray icon menu lets you restore the window or quit the application.
+
+- **Auto-Start Toggle:**  
+  A new toggle in the main (QueueNotifier) tab lets users enable or disable starting the process on system boot. When enabled, the application will automatically launch on system start using Electron's native `setLoginItemSettings`.
 
 - **Configuration via `config.json`:**  
-  The backend API endpoint is stored in `config.json`, making it easy to update without touching the source code.
+  The backend API endpoint is stored in `config.json`—currently set to `http://wow.flesn.uk`—so it can be easily updated without modifying source code.
 
 ---
 
@@ -74,11 +82,11 @@ The API base URL is defined in the `config.json` file. For example:
 
 ```json
 {
-  "apiBaseUrl": "http://localhost:8000"
+  "apiBaseUrl": "http://wow.flesn.uk"
 }
 ```
 
-You can update this URL to match your backend endpoint.
+You may update this URL to match your backend endpoint.
 
 ---
 
@@ -92,10 +100,11 @@ After installing dependencies, run the application with:
 npm start
 ```
 
-The application window will open with the following updated settings:
-- **Window size:** 1000 x 800 pixels.
+The application window will open with the following settings:
+
+- **Window Size:** 1100 x 850 pixels.
 - **DevTools:** Disabled by default.
-- **Node Integration:** Enabled (for development).
+- **Node Integration:** Enabled for development.
 
 ### Packaging the Application
 
@@ -106,7 +115,7 @@ npm install -g electron-packager
 electron-packager . ShuffleQueueNotifier --platform=win32 --arch=x64
 ```
 
-This creates a standalone executable suitable for distribution.
+This creates a standalone executable for distribution.
 
 ---
 
@@ -115,44 +124,52 @@ This creates a standalone executable suitable for distribution.
 ### Main Process (`main.js`)
 
 - **Window Creation & Configuration:**  
-  Creates and configures the main window with dimensions of 1000 x 800 pixels. The openDevTools call is commented out to avoid showing developer tools by default.
-- **IPC & Folder Watcher Initialization:**  
-  Instantiates the folder watcher and registers IPC handlers (in `lib/ipcHandlers.js`).
+  Creates the main window with dimensions 1100 x 850 and loads `index.html`.
+  
+- **Tray Functionality:**  
+  A tray icon (`trayIcon.png`) is created with a context menu that provides options to show the app or quit. The application is hidden to the tray when the close (X) button is pressed.
+  
+- **Folder Watcher & IPC Initialization:**  
+  The main process instantiates the folder watcher (from `lib/folderWatcher.js`) and registers IPC handlers (in `lib/ipcHandlers.js`).
 
 ### Preload Script (`preload.js`)
 
 - **Secure API Exposure:**  
-  Uses Electron's `contextBridge` to expose functions (like folder selection, notification control, and opening external links) under `window.electronAPI`.
+  Uses Electron's `contextBridge` to expose safe APIs to the renderer process. These APIs include functions for selecting folders, starting and stopping the watcher, and updating settings (like notifications and auto-start).
+  
 - **Configuration Exposure:**  
-  Exposes settings from `config.json` to the renderer via `window.config`.
+  The configuration from `config.json` is exposed to the renderer via `window.config`.
 
 ### Renderer Process (`renderer.js`)
 
 - **UI Initialization & Event Binding:**  
-  Handles generating and displaying the UUID, managing folder selection, registration, test notifications, and dynamically updating the watcher status.
-- **External Link Handling:**  
-  Binds click events for both the Telegram registration link and the CurseForge addon link (using `setupTelegramLink()` and the new `setupCurseForgeLink()` functions).
+  Manages UUID generation, folder selection, registration, test notifications, and dynamic status updates. It also binds click events for external links and the auto-start toggle.
+  
+- **Auto-Start Toggle:**  
+  A new function (`setupAutoStartToggle()`) binds the auto-start switch on the main tab to update the application's auto-start behavior through IPC.
 
 ### HTML Layout (`index.html`)
 
 - **Responsive Interface:**  
-  The UI is built with Bootstrap and organized into a vertical navigation layout with two tabs: **QueueNotifier** (for status) and **Setup**.
+  Built with Bootstrap, the UI is organized into a vertical navigation layout with two tabs: **QueueNotifier** (for status and settings) and **Setup** (for registration and folder selection).
+
 - **Setup Tab Enhancements:**  
-  The Setup tab now includes:
-  - Instructions to share your UUID with the Telegram bot.
-  - A new instruction prompting users to install the QueueNotify addon from CurseForge using a clickable link.
+  The Setup tab includes:
+  - Instructions for sharing the UUID with the Telegram bot.
+  - A link to install the QueueNotify addon from CurseForge.
+  - The auto-start toggle and other configuration components.
 
 ---
 
 ## Integration with WoW
 
-For the application to function correctly, the QueueNotify addon must be installed in your World of Warcraft retail client. This addon communicates with the desktop application to properly synchronize notifications.
+For proper functionality, the QueueNotify addon must be installed in your World of Warcraft retail client. The addon synchronizes notifications between your WoW client and this application.
 
 - **Installation Sources:**
-  - [CurseForge](https://www.curseforge.com/wow/addons/queuenotify)  
+  - [CurseForge](https://www.curseforge.com/wow/addons/queuenotify)
   - [Wago](https://addons.wago.io/addons/queuenotify)
 
-After installing the addon, ensure that it is enabled in your WoW client.
+After installation, ensure the addon is enabled in your WoW client.
 
 ---
 
@@ -167,12 +184,12 @@ After installing the addon, ensure that it is enabled in your WoW client.
   { "id": "your-uuid" }
   ```
 - **Response:**  
-  Expects a payload containing an `"encodedID"`, which is then stored locally upon a successful registration.
+  A payload containing an `"encodedID"` is expected. This value is then stored locally upon successful registration.
 
 ### /notify Endpoint
 
 - **Purpose:**  
-  Notifies the backend during file events (or manual testing) with the registered encoded ID and notification retry count.
+  Notifies the backend when file events occur (or during a manual test) using the registered encoded ID and notification retry count.
 - **Request:**  
   ```json
   {
@@ -181,17 +198,34 @@ After installing the addon, ensure that it is enabled in your WoW client.
   }
   ```
 - **Response:**  
-  The result of the notification is displayed in the UI and logged in the application.
+  The result of the notification is displayed in the UI and logged by the application.
 
 ---
 
 ## External Links
 
-The Setup interface provides two external links:
+The Setup interface provides clickable external links that are opened in the default system browser:
+
 - **Telegram:**  
-  Sends you to the Telegram bot (`@queuenotify_rudikiaz_bot`) for registration.
+  Redirects to the Telegram bot (`@queuenotify_rudikiaz_bot`) for registering your Telegram user.
+
 - **CurseForge:**  
-  Opens the QueueNotify addon page from CurseForge using Electron's API. When clicked, these links are opened in the user's default system browser.
+  Opens the QueueNotify addon page on CurseForge so that you can install the addon required for proper synchronization.
+
+---
+
+## Tray Functionality
+
+The application now minimizes to the system tray when the close button is pressed. In the tray icon's context menu, you have two options:
+
+- **Show App:** Restores the hidden window.
+- **Quit:** Exits the application (sets a flag and then calls `app.quit()`).
+
+---
+
+## Auto-Start Settings
+
+A new auto-start toggle is provided on the main (QueueNotifier) tab. When enabled, this setting configures the application to start automatically on system boot via Electron's `setLoginItemSettings`.
 
 ---
 
@@ -201,21 +235,24 @@ The Setup interface provides two external links:
    - On first launch, a unique UUID is generated and displayed.
    - Share this UUID with the Telegram bot and click **Register UUID**. Upon successful registration, the encoded ID is stored.
 2. **Folder Selection:**  
-   - Use the **Select Folder** button to choose your WoW retail folder. The app then monitors the **Screenshots** subfolder.
+   - Use the **Select Folder** button to choose your WoW retail folder. The app monitors the **Screenshots** subfolder.
 3. **Watching & Notifications:**  
-   - Once registered and a valid folder is selected, the folder watcher activates and updates the status.
-   - New `.tga` files trigger the `/notify` endpoint and are deleted after being processed.
+   - When registered and a valid folder is selected, the folder watcher is activated.
+   - New `.tga` files trigger the `/notify` endpoint and are deleted after processing.
 4. **Test Notifications:**  
    - Use the **Test Notifications** button to manually verify the notification flow.
 5. **External Link Actions:**  
    - Click the Telegram link to register your Telegram user.
    - Click the CurseForge link to be redirected to the QueueNotify addon page in your default browser.
+6. **Tray & Auto-Start:**  
+   - When you close the window, the app hides to the system tray.  
+   - Use the auto-start toggle to configure whether the app should launch automatically with your system.
 
 ---
 
 ## Git Ignore
 
-The `.gitignore` file ensures that files such as the `node_modules` folder are not committed to version control.
+The `.gitignore` file ensures that files and directories such as `node_modules` are not committed to version control.
 
 ```
 node_modules/

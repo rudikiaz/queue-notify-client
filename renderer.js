@@ -13,6 +13,7 @@ function init() {
     setupTelegramLink();
     setupCurseForgeLink();
     bindNotifyResultListener();
+    setupAutoStartToggle();
 }
 
 function initializeUUID() {
@@ -211,4 +212,16 @@ function bindNotifyResultListener() {
             console.log("Notify result:", data);
         });
     }
-} 
+}
+
+
+function setupAutoStartToggle() {
+    const autoStartToggle = document.getElementById('autoStartToggle');
+    if (autoStartToggle) {
+        autoStartToggle.addEventListener('change', () => {
+            const enabled = autoStartToggle.checked;
+            window.electronAPI.updateAutoStart(enabled);
+            console.log("Auto-start toggle changed. New state:", enabled);
+        });
+    }
+}

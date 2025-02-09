@@ -10,7 +10,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('notify-result', (event, data) => callback(data)),
     openExternalLink: (url) => ipcRenderer.invoke('open-external', url),
     updateNotifyEnabled: (enabled) => ipcRenderer.send('update-notify-enabled', enabled),
-    getNotifyRetries: () => ipcRenderer.invoke('get-notify-retries')
+    getNotifyRetries: () => ipcRenderer.invoke('get-notify-retries'),
+    updateAutoStart: (enabled) => ipcRenderer.send('update-auto-start', enabled)
 });
 
 // Expose the configuration to the renderer.
