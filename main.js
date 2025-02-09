@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const config = require('./config.json');
 
 let mainWindow;
 let folderWatcher = null;
@@ -59,7 +60,7 @@ async function callNotifyWithRetries(eventType, filename) {
         return;
     }
 
-    const url = "http://localhost:8000/notify"; // Change to your API endpoint if needed.
+    const url = config.apiBaseUrl + "/notify";
 
     // Retrieve the registered ID from localStorage via the renderer.
     const registeredID = await mainWindow.webContents.executeJavaScript('localStorage.getItem("registeredID")');

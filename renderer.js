@@ -91,7 +91,7 @@ window.addEventListener('DOMContentLoaded', () => {
         registerButton.addEventListener('click', async () => {
             try {
                 console.log('Initiating registration request with UUID:', appUUID);
-                const response = await fetch("http://localhost:8000/register", {
+                const response = await fetch(window.config.apiBaseUrl + "/register", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: appUUID })
@@ -174,7 +174,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const payload = { encodedID: registeredID, notifyRetries: retries };
             try {
                 console.log("Sending test notification with payload:", payload);
-                const response = await fetch("http://localhost:8000/notify", {
+                const response = await fetch(window.config.apiBaseUrl + "/notify", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
